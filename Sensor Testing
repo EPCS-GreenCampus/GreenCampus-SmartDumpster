@@ -55,33 +55,35 @@ void loop() {
 
   h15 = dumpsterHeight - (dist15 * sin(15*PI/180)); //height reading of the 15 degree sensor
   h60 = dumpsterHeight - ((dist60) * sin(60*PI/180) + offsetHeight60); //height reading of the 60 degree sensor
-  x15 = dist15 * cos(radians(15)); //x-axis distance reading of the 15 degree sensor from the sensor to trash
-  x60 = dist60 * cos(radians(60)); //x-axis distance reading of the 60 degree sensor from the sensor to trash
+  x15 = dumpsterlen - (dist15 * cos(radians(15))); //x-axis distance reading of the 15 degree sensor from the end of the bin's wall to trash
+  x60 = dumpsterlen - (dist60 * cos(radians(60))); //x-axis distance reading of the 60 degree senso from the end of the bin's wall to trash
   
   Serial.print("dist15: ");
-  Serial.println(dist15);
+  Serial.println(dist15 - offsetDist15);
   Serial.print("dist60: ");
-  Serial.println(dist60);
+  Serial.println(dist60 - + offsetDist60);
 
-  Serial.print("h15: ");
-  Serial.println(h15);
-  Serial.print("h60: ");
-  Serial.println(h60);
   
+  
+  trashVolume = 0;
 
   //Check 60-degree if reading things
   //if the detected ditance is shorter than the defualt distance -> sensor is detecting trash
   if(dist60 < defaultD60*0.85){
-    realHeight = h60;
-    trashVolume = realHeight * dumpsterWidth * (dumpsterlen-x60);
-    if(dist15 < defaultD15*0.95){   
+    Serial.print("h60: ");
+    Serial.println(h60);
+    trashVolume = h60 * dumpsterWidth * x60;
+    if(dist15 < defaultD15*0.85){   
+      Serial.print("h15: ");
+      Serial.println(h15);
       //Seperate into 2 volume
       Serial.println("True");
-      long bottomVol = h60 * dumpsterWidth * (dumpsterlen-x60);
-      long topVol = ((dumpsterlen-x60) + (dumpsterlen-x15)) * (h15-h60) / 2;
+      long bottomVol = h60 * dumpsterWidth * x60;
+      long topVol = (x60 + x15) * (h15-h60) / 2 * dumpsterWidth;
       trashVolume = topVol+bottomVol;
       }
   }
+
   Serial.print("Trash Vol: ");
   Serial.println(trashVolume);
 
@@ -91,7 +93,7 @@ void loop() {
   fullnessPer = ((float)trashVolume / (float)totalVolume) * 100; //Calculte the fullness percentage
   Serial.print(fullnessPer);
   Serial.println("%");
-  delay(200); // Main loop delay
+  delay(1000); // Main loop delay
 }
 
   
@@ -99,7 +101,7 @@ void loop() {
 //Reading ultrasonic sensor data
 long readSensor(SoftwareSerial &sensor) {
   sensor.listen(); // Switch to this sensor
-  delay(10); // Short stabilization delay
+  delay(100); // Short stabilization delay
   
   unsigned char data[4] = {0};
   unsigned long startTime = millis();
@@ -107,7 +109,7 @@ long readSensor(SoftwareSerial &sensor) {
   while (millis() - startTime < 300) { // 300ms timeout
     if (sensor.available() > 0) {
       if (sensor.read() == 0xFF) {
-        delay(5); // Small delay to ensure data arrives
+        delay(10); // Small delay to ensure data arrives
         if (sensor.available() >= 3) {
           data[1] = sensor.read(); // High byte
           data[2] = sensor.read(); // Low byte
