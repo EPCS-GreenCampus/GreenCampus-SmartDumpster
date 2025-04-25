@@ -3,125 +3,128 @@
 #include <SoftwareSerial.h>
 
 #define SENSOR15_RX 10 //echo pin
-#define SENSOR15_TX 11 //trig pin -- rightmost wire
+#define SENSOR15_TX 11 //trig pin -- rightmost wire - white wire
 #define SENSOR60_RX 8
 #define SENSOR60_TX 9
 
 #define PI 3.14159
 
+//Defining constants
 long defaultHeight1,duration, distance, defaultHeight2, dist15, dist60, h15, h60, realHeight;
 long trashVolume, dumpsterHeight, dumpsterWidth, dumpsterlen, totalVolume, fullnessPer, x15, x60;
 long testDumpLen, testDumpWidth, testDumpHeight, defaultD15, defaultD60, offsetDist60, offsetHeight60, offsetDist15;
 
-
+//Set up for 2 sensors
 SoftwareSerial sensor15(SENSOR15_RX, SENSOR15_TX);
 SoftwareSerial sensor60(SENSOR60_RX, SENSOR60_TX);
 
 void setup() {
-  Serial.begin(115200);
-  sensor15.begin(9600);
-  sensor60.begin(9600);
+Serial.begin(115200); //Make sure serial Monitor's baud is 115200
+sensor15.begin(9600);
+sensor60.begin(9600);
 
-  testDumpLen = 36;
-  testDumpWidth = 24;
-  testDumpHeight = 36;
+//Specs for the test dumpster
+testDumpLen = 36;
+testDumpWidth = 24;
+testDumpHeight = 36;
 
-  dumpsterHeight = testDumpHeight; //height of the dumpster in inches
-  dumpsterWidth = testDumpWidth; //Width of the dumpster in inches
-  dumpsterlen = testDumpLen; //length of the dumpster in inches
+//Change these values to real dumpster's specs when the time comes
+dumpsterHeight = testDumpHeight; //height of the dumpster in inches
+dumpsterWidth = testDumpWidth; //Width of the dumpster in inches
+dumpsterlen = testDumpLen; //length of the dumpster in inches
 
-  defaultD15= dumpsterlen / cos(radians(15));; //User input of default distance for 15-degree angle
-  defaultD60 = dumpsterHeight / cos(radians(30)); //User input of default distance for 60-degree angle
-  realHeight = 0; //final height we're taking for the trash
+//Distance when the sensors are not reading anything
+defaultD15= dumpsterlen / cos(radians(15));; //User input of default distance for 15-degree angle
+defaultD60 = dumpsterHeight / cos(radians(30)); //User input of default distance for 60-degree angle
+realHeight = 0; //final height we're taking for the trash
 
-  offsetDist60 = 4.5*cos(60*PI/180); //the offset distance the sensor are placed away from the wall
-  offsetHeight60 = 3; //the offset height the sensor are placed away from the wall
+//These are offsets of the test casing
+offsetDist60 = 4.5*cos(60*PI/180); //the offset distance the sensor are placed away from the wall
+offsetHeight60 = 3; //the offset height the sensor are placed away from the wall
 
-  offsetDist15 = 4.5;
+offsetDist15 = 4.5;
 
-  trashVolume = 0; //volume of trash
-  totalVolume = dumpsterHeight*dumpsterWidth*dumpsterlen; //volume of the dumpster in cubic inches
-  fullnessPer = 0; // fullness percentage
+trashVolume = 0; //volume of trash
+totalVolume = dumpsterHeight*dumpsterWidth*dumpsterlen; //volume of the dumpster in cubic inches
+fullnessPer = 0; // fullness percentage
 }
 
 void loop() {
-  //trigger - tx (PIN 10) output
-  //echo - rx (PIN 11) input
+//trigger - tx (PIN 10) output
+//echo - rx (PIN 11) input
 
-  dist15 = readSensor(sensor15) + offsetDist15; //distance reading of 15-degree sesnsor
-  delay(50); // Delay between sensor reads
-  dist60 = readSensor(sensor60) + offsetDist60; //distance reading of 60-degree sesnsor
-  delay(50); // Delay between sensor reads
+dist15 = readSensor(sensor15) + offsetDist15; //distance reading of 15-degree sesnsor
+delay(50); // Delay between sensor reads
+dist60 = readSensor(sensor60) + offsetDist60; //distance reading of 60-degree sesnsor
+delay(50); // Delay between sensor reads
 
-  h15 = dumpsterHeight - (dist15 * sin(15*PI/180)); //height reading of the 15 degree sensor
-  h60 = dumpsterHeight - ((dist60) * sin(60*PI/180) + offsetHeight60); //height reading of the 60 degree sensor
-  x15 = dumpsterlen - (dist15 * cos(radians(15))); //x-axis distance reading of the 15 degree sensor from the end of the bin's wall to trash
-  x60 = dumpsterlen - (dist60 * cos(radians(60))); //x-axis distance reading of the 60 degree senso from the end of the bin's wall to trash
-  
-  Serial.print("dist15: ");
-  Serial.println(dist15 - offsetDist15);
-  Serial.print("dist60: ");
-  Serial.println(dist60 - + offsetDist60);
+h15 = dumpsterHeight - (dist15 * sin(15*PI/180)); //height reading of the 15 degree sensor
+h60 = dumpsterHeight - ((dist60) * sin(60*PI/180) + offsetHeight60); //height reading of the 60 degree sensor
+x15 = dumpsterlen - (dist15 * cos(radians(15))); //x-axis distance reading of the 15 degree sensor from the end of the bin's wall to trash
+x60 = dumpsterlen - (dist60 * cos(radians(60))); //x-axis distance reading of the 60 degree senso from the end of the bin's wall to trash
 
-  
-  
-  trashVolume = 0;
+Serial.print("dist15: ");
+Serial.println(dist15 - offsetDist15);
+Serial.print("dist60: ");
+Serial.println(dist60 - + offsetDist60);
+Serial.print("h60: ");
+Serial.println(h60);
+Serial.print("h15: ");
+Serial.println(h15);
 
-  //Check 60-degree if reading things
-  //if the detected ditance is shorter than the defualt distance -> sensor is detecting trash
-  if(dist60 < defaultD60*0.85){
-    Serial.print("h60: ");
-    Serial.println(h60);
-    trashVolume = h60 * dumpsterWidth * x60;
-    if(dist15 < defaultD15*0.85){   
-      Serial.print("h15: ");
-      Serial.println(h15);
-      //Seperate into 2 volume
-      Serial.println("True");
-      long bottomVol = h60 * dumpsterWidth * x60;
-      long topVol = (x60 + x15) * (h15-h60) / 2 * dumpsterWidth;
-      trashVolume = topVol+bottomVol;
-      }
+trashVolume = 0;
+
+//Check 60-degree if reading things
+//if the detected ditance is shorter than 85% of the defualt distance -> sensor is detecting trash
+if(dist60 <= defaultD60*0.85){
+trashVolume = h60 * dumpsterWidth * x60;
+if(dist15 <= defaultD15*0.85){   
+  //Seperate into 2 volume
+  //Serial.println("True");
+  long bottomVol = h60 * dumpsterWidth * x60;
+  long topVol = (x60 + x15) * (h15-h60) / 2 * dumpsterWidth;
+  trashVolume = topVol+bottomVol;
   }
-
-  Serial.print("Trash Vol: ");
-  Serial.println(trashVolume);
-
-  Serial.print("Total Vol: ");
-  Serial.println(totalVolume);
-  
-  fullnessPer = ((float)trashVolume / (float)totalVolume) * 100; //Calculte the fullness percentage
-  Serial.print(fullnessPer);
-  Serial.println("%");
-  delay(1000); // Main loop delay
 }
 
-  
+Serial.print("Trash Vol: ");
+Serial.println(trashVolume);
+
+Serial.print("Total Vol: ");
+Serial.println(totalVolume);
+
+fullnessPer = ((float)trashVolume / (float)totalVolume) * 100; //Calculte the fullness percentage
+Serial.print(fullnessPer);
+Serial.println("%");
+delay(1000); // Main loop delay
+}
+
+
 
 //Reading ultrasonic sensor data
 long readSensor(SoftwareSerial &sensor) {
-  sensor.listen(); // Switch to this sensor
-  delay(100); // Short stabilization delay
-  
-  unsigned char data[4] = {0};
-  unsigned long startTime = millis();
-  
-  while (millis() - startTime < 300) { // 300ms timeout
-    if (sensor.available() > 0) {
-      if (sensor.read() == 0xFF) {
-        delay(10); // Small delay to ensure data arrives
-        if (sensor.available() >= 3) {
-          data[1] = sensor.read(); // High byte
-          data[2] = sensor.read(); // Low byte
-          data[3] = sensor.read(); // Checksum
-          
-          // Verify checksum (overflow handled by byte casting)
-          if (data[3] == (byte)(0xFF + data[1] + data[2])) {
-            return ((data[1] << 8) + data[2]) * 0.0393700787; // Convert to inches
-          }
-        }
+sensor.listen(); // Switch to this sensor
+delay(100); // Short stabilization delay
+
+unsigned char data[4] = {0};
+unsigned long startTime = millis();
+
+while (millis() - startTime < 300) { // 300ms timeout
+if (sensor.available() > 0) {
+  if (sensor.read() == 0xFF) {
+    delay(10); // Small delay to ensure data arrives
+    if (sensor.available() >= 3) {
+      data[1] = sensor.read(); // High byte
+      data[2] = sensor.read(); // Low byte
+      data[3] = sensor.read(); // Checksum
+      
+      // Verify checksum (overflow handled by byte casting)
+      if (data[3] == (byte)(0xFF + data[1] + data[2])) {
+        return ((data[1] << 8) + data[2]) * 0.0393700787; // Convert to inches
       }
     }
   }
-  return -1; // Return error if timeout
+}
+}
+return -1; // Return error if timeout
 }
