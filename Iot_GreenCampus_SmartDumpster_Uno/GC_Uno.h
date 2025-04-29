@@ -1,5 +1,5 @@
 /*
-GreenCampus - Arduino Uno Version
+GreenCampus SmartDumpster - Arduino Uno Version
 - GC_Uno.h
 
 This header file is part of the GreenCampus project for Arduino Uno.
@@ -14,10 +14,10 @@ It includes the necessary libraries and defines the constants used throughout th
 #ifndef GC_UNO_H
 #define GC_UNO_H
 
-// ===================== LIBRARY DEFINES ========================
-#define TINY_GSM_MODEM_SIM7000
+// ======================== LIBRARY DEFINES ========================
+#define TINY_GSM_MODEM_SIM7000      // Redfined for redundancy, better safe than sorry
 
-// ========================= INCLUDES ===========================
+// ======================== INCLUDES ========================
 #include <TinyGsmClient.h>
 #include <ArduinoJson.h>
 #include <SoftwareSerial.h>
@@ -27,8 +27,11 @@ extern TinyGsm modem;
 extern TinyGsmClient client;
 extern Stream &SerialMon;
 
+// ======================== FUNCTION DECLARATIONS ========================
+// Add your function declarations here
 void powerOnModem(int RST, int PWR);
 void sendDataToSoracom(Stream &SerialMon);
 String getISOTimestamp(TinyGsm& modem);
 
-#endif // GC_UNO_H
+#endif 
+// GC_UNO_H
