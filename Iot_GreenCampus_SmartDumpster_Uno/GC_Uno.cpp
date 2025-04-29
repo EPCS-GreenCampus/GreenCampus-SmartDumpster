@@ -1,5 +1,5 @@
 /*
-GreenCampus SmartDumpster- Arduino Uno Version
+GreenCampus SmartDumpster - Arduino Uno Version
 - GC_Uno.cpp
 
 This file is part of the GreenCampus SmartDumpster project, designed to work 
@@ -16,27 +16,24 @@ as needed. "GC_UNO.h" includes the necessary libraries and defines the constants
 used throughout the project.
 */
 
-// ===================== INCLUDES ========================
+// ======================== INCLUDES ========================
 #include "GC_Uno.h"
 
-// =================== GLOBAL VARIABLES ===================
+// ======================== GLOBAL VARIABLES ========================
 // Entrypoint for Soracom Harvest
-const char entrypoint[] = "harvest.soracom.io";
-// This is the entrypoint for Soracom Harvest, where the data will be sent
+const char entrypoint[] = "harvest.soracom.io";     // Entrypoint for Soracom Harvest, where data will be sent
 
 // Port for Soracom Harvest
-const int soracomPort = 80;
-// This is the port used for HTTP communication with Soracom Harvest
+const int soracomPort = 80;         // Port for Soracom Harvest, default is 80 for HTTP communication. 
+const char apn[] = "soracom.io";    // APN for Soracom, used for GPRS reconnection
+const char User[] = "sora";         // User for Soracom, used for GPRS reconnection
+const char Pass[] = "sora";         // Password for Soracom, used for GPRS reconnection
 
 // Link to the Soracom Harvest Overview page:
 // https://developers.soracom.io/en/docs/harvest/
 
-const char apn[] = "soracom.io";
-const char User[] = "sora";
-const char Pass[] = "sora";
 
-// ===================== FUNCTION DEFINITIONS =======================
-
+// ======================== FUNCTION DEFINITIONS ========================
 /*
 powerOnModem - Power on the modem using the RST and PWR pins
 
@@ -49,11 +46,10 @@ This is to ensure the modem powers on correctly and is ready for communication.
 
 This is set in mind for Arduino Uno and SIM7000A, but can be adapted for other 
 boards. So, check whether you need to change hold times when adapting to the
-Arduino Nano ESP32 or ESP8266.
+Arduino Nano ESP32 or ESP8266. Pins can be changed in the .ino file.
 
 Link to the SIM7000A schematic:
 https://github.com/botletics/SIM7000-LTE-Shield/blob/master/Schematics/SIM7000%20Shield%20Schematic%20v6.png
-
 */
 void powerOnModem(int RST, int PWR) {
   // Setup RST Pin
@@ -97,7 +93,6 @@ Examples of valid timestamps used by Soracom Harvest:
 Date/Time (ISO-8601): 2022-10-05T11:30:45.000Z
 Unix Time (seconds): 1633433445
 Unix Time (milliseconds): 1633433445000
-
 */
 String getISOTimestamp(TinyGsm& modem) {
   // Send AT command to get time
@@ -188,6 +183,35 @@ Parameters:
   SerialMon - The serial monitor stream for debug output.
 
 This function connects to the Soracom Harvest endpoint and sends JSON data.
+It handles GPRS connection, client connection, and HTTP POST request.
+  
+    
+CURRENTLY SENDS ONLY MOCK DATA FOR TESTING.
+Todo for upcoming semester (2025 Fall):
+- Replace with actual data from your sensors. There are two ways to do this.
+  1. Replace the mock data with actual sensor data in the JSON payload. You can
+  do this by calling or calculating the fullness in the function itself.
+
+  2. Pass the sensor data as parameters to the function. So you can call or
+  calculate the fullness in the main loop and pass it to this function. 
+
+- Reduce payload size by converting the JSON to a binary format. This will 
+  reduce the size of the payload and make it easier to send over the network.
+  This will be complicated, but can be done. ECE 270, ECE 362, and ECE 404 
+  references will be helpful for this. If you took them. If not, you can 
+  try to find students who took them and ask them for help.
+
+  Ex. 0101010010|10101010101|010101|0101|01010|10101|01010101|0101010101010101|010101010
+  You can divide up a binary string into bit segments and send them over the network.
+  Each segment will be hold a specific value. You can use this method to view certain segments
+  and decide what each segment means and what it will hold. 
+
+  Using the two Most Significant Bits (MSB) as examples:
+  0101010010 could be the fullness of the dumpster. 10101010101 could be the time.
+  Since fullness is a percentage (0-100), you can use the first 7 bits to represent the fullness.
+
+  - Optimize/Modifiy the function to your hearts content. Just keep it functional and working.
+  You can modify everything except the HTTP POST request part. This part is correct, so don't change it.
 */
 void sendDataToSoracom(Stream &SerialMon) {
   TinyGsmClient client(modem, 0);
@@ -197,8 +221,8 @@ void sendDataToSoracom(Stream &SerialMon) {
   // Replace with actual data from your sensors
   StaticJsonDocument<1024> jsonDoc;
   jsonDoc["id"] = random(1,7);
+  jsonDoc["fullness"] = random(0,100);
   jsonDoc["temperature"] = random(0, 120);
-  jsonDoc["humidity"] = random(20, 60);
   jsonDoc["status"] = "OK";
 
 
@@ -216,6 +240,7 @@ void sendDataToSoracom(Stream &SerialMon) {
   }
 */
 
+  // Measure JSON size
   int contentLength = measureJson(jsonDoc);
 
   // Close previous connection if still open
@@ -235,8 +260,11 @@ void sendDataToSoracom(Stream &SerialMon) {
     }
   }
 
+  // Connect to Soracom Harvest
   SerialMon.println("Connecting to Soracom Harvest...");
   int retries = 0;
+  // Keep trying to connect until success or max retries
+  // This is to ensure the connection is established before sending data
   while (!client.connect(entrypoint, soracomPort) && retries < 5) {
     SerialMon.println("Failed to connect to Soracom Harvest, retrying in 5 seconds...");
     retries++;
@@ -260,18 +288,25 @@ void sendDataToSoracom(Stream &SerialMon) {
   client.println("Connection: close");
   client.println();
   serializeJson(jsonDoc, client);   // Send payload directly
-  client.flush();  // ensure it's sent
+  client.flush();  // Ensure it's sent
 
   // Read server response
   SerialMon.println("Reading server response");
   String response = "";
+  unsigned long timeout = millis();
   while (client.connected() || client.available()) {
       if (client.available()) {
           String line = client.readStringUntil('\n');
           response += line + "\n";
           SerialMon.println(line);
+          timeout = millis();  // Reset timeout after successful read
+      }
+
+      if (millis() - timeout > 10000) {  // 10 seconds timeout
+          break;
       }
   }
+
   SerialMon.println("Server Response: " + response);
   if (client.connected()) {
     client.stop();
