@@ -1,0 +1,140 @@
+#include <SoftwareSerial.h>
+#include <math.h>
+
+// Sensor pins
+#define SENSOR15_RX 10
+#define SENSOR15_TX 11 // FIXED: Missing '#' here caused the error
+#define SENSOR60_RX 8
+#define SENSOR60_TX 9
+
+// Dumpster dimensions (inches)
+const long testDumpLen = 24;
+const long testDumpWidth = 24;
+const long testDumpHeight = 36;
+
+float dumpsterHeight = (float)testDumpHeight;
+float dumpsterWidth = (float)testDumpWidth;
+float dumpsterLen = (float)testDumpLen;
+
+// Sensor angles (degrees from horizontal)
+float angleTop = 15.0;
+float angleBottom = 60.0;
+
+// Optional offsets for fine-tuning
+long offsetDist15 = 0;
+long offsetDist60 = 0;
+long offsetHeight60 = 0;
+
+long totalVolume;
+long trashVolume;
+float fullnessPer;
+
+long dist15, dist60;
+float h15, h60;
+
+SoftwareSerial sensor15(SENSOR15_RX, SENSOR15_TX);
+SoftwareSerial sensor60(SENSOR60_RX, SENSOR60_TX);
+
+const int READ_RETRIES = 5;
+
+void setup() {
+  Serial.begin(115200);
+
+  sensor15.begin(9600);
+  sensor60.begin(9600);
+  delay(200);
+
+  totalVolume = testDumpLen * testDumpWidth * testDumpHeight;
+
+  trashVolume = 0;
+  fullnessPer = 0.0;
+}
+
+void loop() {
+  long raw15 = -1;
+  long raw60 = -1;
+
+  // ---- READ SENSOR 15 ----
+  sensor60.end();
+  sensor15.listen();
+  delay(60);
+  for (int i = 0; i < READ_RETRIES; i++) {
+    raw15 = readSensor(sensor15);
+    if (raw15 >= 0) break;
+  }
+  dist15 = (raw15 >= 0) ? (raw15 + offsetDist15) : testDumpHeight;
+
+  // ---- READ SENSOR 60 ----
+  sensor15.end();
+  sensor60.listen();
+  delay(60);
+  for (int i = 0; i < READ_RETRIES; i++) {
+    raw60 = readSensor(sensor60);
+    if (raw60 >= 0) break;
+  }
+  dist60 = (raw60 >= 0) ? (raw60 + offsetDist60) : testDumpHeight;
+
+  // -------------------------------
+  // GEOMETRY AND VOLUME CALCULATION
+  // -------------------------------
+
+  // FIX: Convert angled distance to vertical component using SIN
+  float vert15 = (float)dist15 * sin(angleTop * M_PI / 180.0);
+  float vert60 = (float)dist60 * sin(angleBottom * M_PI / 180.0);
+
+  // Trash height = dumpsterHeight - vertical distance (empty space)
+  h15 = dumpsterHeight - vert15;
+  h60 = dumpsterHeight - vert60 - offsetHeight60;
+
+  h15 = constrain(h15, 0.0, dumpsterHeight);
+  h60 = constrain(h60, 0.0, dumpsterHeight);
+
+  // Use max height to avoid underestimating fullness (standard C++ comparison)
+  float maxHeight = (h15 > h60) ? h15 : h60; 
+  trashVolume = (long)(maxHeight * dumpsterWidth * dumpsterLen);
+  fullnessPer = ((float)trashVolume / (float)totalVolume) * 100.0;
+
+  // ---- SERIAL OUTPUT ----
+  Serial.println("--- Readings ---");
+  Serial.print("dist15 (sensor out): "); Serial.println((raw15 >= 0) ? raw15 : -1);
+  Serial.print("dist60 (sensor out): "); Serial.println((raw60 >= 0) ? raw60 : -1);
+  Serial.print("h15 (Trash Height): "); Serial.println(h15);
+  Serial.print("h60 (Trash Height): "); Serial.println(h60);
+  Serial.print("Max Height: "); Serial.println(maxHeight);
+  Serial.print("Trash Volume (in^3): "); Serial.println(trashVolume);
+  Serial.print("Total Volume (in^3): "); Serial.println(totalVolume);
+  Serial.print("Fullness: "); Serial.print(fullnessPer); Serial.println("%");
+
+  delay(1000);
+}
+
+// === readSensor function ===
+long readSensor(SoftwareSerial &sensor) {
+  unsigned long start = millis();
+  while (millis() - start < 250) {
+    if (sensor.available() == 0) continue;
+
+    if (sensor.peek() != 0xFF) {
+      sensor.read();
+      continue;
+    }
+
+    if (sensor.available() < 4) continue;
+
+    uint8_t header = sensor.read();
+    uint8_t high = sensor.read();
+    uint8_t low = sensor.read();
+    uint8_t sum = sensor.read();
+
+    uint8_t calc = (0xFF + high + low) & 0xFF;
+    if (sum != calc) continue;
+
+    uint16_t mm = (high << 8) | low;
+    long inches = (long)(mm * 0.0393700787);
+    if (inches < 0) continue;
+
+    return inches;
+  }
+
+  return -1;
+}
