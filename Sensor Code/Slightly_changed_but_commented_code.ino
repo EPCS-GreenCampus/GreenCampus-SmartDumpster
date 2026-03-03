@@ -1,3 +1,4 @@
+//This is the current working code with the sensors as of 3-3
 #include <SoftwareSerial.h>
 #include <AltSoftSerial.h>
 
