@@ -1,0 +1,279 @@
+//change baud to 9600
+//Pins of sensor input/output
+#include <SoftwareSerial.h> //working but needs to be fixed to make the thing change from one sensor to the other because we are getting stability issues
+
+//ngl just ask chat or something what the problem is cause I don't understand it
+
+#define SENSOR15_RX 10 //echo pin
+#define SENSOR15_TX 11 //trig pin -- rightmost wire - white wire
+#define SENSOR60_RX 9
+#define SENSOR60_TX 8
+
+#define PI 3.14159
+
+//Defining constants
+long defaultHeight1,duration, distance, defaultHeight2, dist15, dist60, h15, h60, realHeight, angleTop, angleBottom;
+long trashVolume, dumpsterHeight, dumpsterWidth, dumpsterLen, totalVolume, fullnessPer, x15, x60;
+long testDumpLen, testDumpWidth, testDumpHeight, defaultD15, defaultD60, offsetDist60, offsetHeight60, offsetDist15;
+
+//Set up for 2 sensors
+SoftwareSerial sensor15(SENSOR15_RX, SENSOR15_TX);
+SoftwareSerial sensor60(SENSOR60_RX, SENSOR60_TX);
+
+// ======================== SENSOR ID ========================
+// Set ID for the Sensor Device, this is Sensor Device 1 (SD 1)
+// Currently, we just hard code the ID so we know which one is which,
+// but in the future you can use the SIM ID to log which device is which from Soracom.
+// You can probably ping Soracom on here and receive the ID and then pack it along with 
+// the JSON Data. Just ask for the CCID. Up to you.
+#define SENSOR_ID       1
+
+// ======================== LIBRARY DEFINES ========================
+// TinyGSM requires certain defines to be set for the modem and connection type.
+// The following defines are for the SIM7000A modem and GPRS connection.
+#define TINY_GSM_MODEM_SIM7000          // Redfined for redundancy, better safe than sorry
+#define TINY_GSM_USE_GPRS true          // Enable GPRS
+#define TINY_GSM_USE_WIFI false         // Disable WiFi
+
+// ======================== INCLUDES ========================
+#include "GC_Uno.h"                     // Include the custom header file for GreenCampus functions
+#include <TinyGsmClient.h>              // Include the TinyGSM library for GSM communication
+
+// ======================== PIN DEFINITIONS ========================
+// Pins will change depending on the board used.
+// The following pin definitions are for the Arduino Uno and SIM7000A Shield.
+#define MODEM_PWRKEY     6
+#define MODEM_RST        7
+#define MODEM_TX         11             // Arduino Uno TX → SIM7000 RX, 
+#define MODEM_RX         10             // Arduino Uno RX ← SIM7000 TX
+
+// Link to the SIM7000A schematic:
+// https://github.com/botletics/SIM7000-LTE-Shield/blob/master/Schematics/SIM7000%20Shield%20Schematic%20v6.png
+
+// Set serial for debug console (to the Serial Monitor, default speed 115200)
+#define SerialMon Serial
+
+//#include <SoftwareSerial.h>
+SoftwareSerial SerialAT(MODEM_RX, MODEM_TX);  // RX, TX
+
+// Define the APN, User, and Pass for the GPRS connection
+// These are the default values for Soracom
+const char apn[] = "soracom.io";
+const char User[] = "sora";
+const char Pass[] = "sora";
+
+// Buffer size for AT commands
+#if !defined(TINY_GSM_RX_BUFFER)
+#define TINY_GSM_RX_BUFFER 650
+#endif
+
+// See all AT commands, if wanted
+// #define DUMP_AT_COMMANDS
+
+// Define the serial console for debug prints, if needed
+#define TINY_GSM_DEBUG SerialMon
+// #define TINY_GSM_DEBUG_DEEP
+
+// Debug Prints
+#ifdef DUMP_AT_COMMANDS
+#include <StreamDebugger.h>
+StreamDebugger debugger(SerialAT, SerialMon);
+TinyGsm        modem(debugger);
+#else
+TinyGsm        modem(SerialAT);
+#endif
+
+void setup() {
+  Serial.begin(115200); //Make sure serial Monitor's baud is 115200
+  sensor15.begin(9600);
+  sensor60.begin(9600);
+
+  //Specs for the test dumpster
+  testDumpLen = 24;
+  testDumpWidth = 24;
+  testDumpHeight = 36;
+
+  angleTop = 15; // If we want to change the angles of the sensors
+  angleBottom = 60;
+
+  //Change these values to real dumpster's specs when the time comes
+  dumpsterHeight = testDumpHeight; //height of the dumpster in inches
+  dumpsterWidth = testDumpWidth; //Width of the dumpster in inches
+  dumpsterLen = testDumpLen; //length of the dumpster in inches
+
+  //Distance when the sensors are not reading anything
+  defaultD15= dumpsterLen / cos(radians(angleTop));; //User input of default distance for 15-degree angle
+  defaultD60 = dumpsterHeight / cos(radians(90-angleBottom)); //User input of default distance for 60-degree angle
+  realHeight = 0; //final height we're taking for the trash
+
+  //These are offsets of the test casing
+  offsetDist60 = 2;
+  //4.5*cos(60*PI/180); //the offset distance the sensor are placed away from the wall
+  offsetHeight60 = 2; //the offset height the sensor are placed away from the wall
+
+  offsetDist15 = 3;
+
+  trashVolume = 0; //volume of trash
+  totalVolume = dumpsterHeight*dumpsterWidth*dumpsterLen; //volume of the dumpster in cubic inches
+  fullnessPer = 0; // fullness percentage
+
+      // Initialize debug serial
+    SerialMon.begin(115200);        // Set Serial Monitor to 115200 Baud
+    delay(10);
+    // DBG("==== SIM7000A Uno ====");
+    SerialMon.println("==== SIM7000A Uno ====");
+
+    // Initialize pins
+    powerOnModem(MODEM_RST, MODEM_PWRKEY);
+
+    // Begin communication with modem
+    const long baud = 9600;     // DO NOT EVER DELETE. CODE WANTS CONSTANT LONG, DONT TRY TO OPTIMIZE
+    SerialAT.begin(baud);
+    delay(300);  // Allow time for the modem to settle
+
+    // Network side of setup
+    // Keep trying to restart until success
+    // DBG("Initializing modem...");
+    SerialMon.println("Initialzing Modem...");
+    while(!modem.restart()) {
+        // DBG("Failed to restart modem, delaying 10s and retrying");
+        SerialMon.println("Failed to restart modem, delaying 10s and retrying");
+        delay(10000);
+    }
+    // DBG("Modem initialized successfully.");
+    SerialMon.println("Modem initialized successfully.");
+    delay(10000);  // Give time to restart
+
+    // Network Connection
+    // Keep trying to connect until success
+    // DBG("Connecting to", apn);
+    SerialMon.print("Connecting to "); 
+    SerialMon.println(apn);
+    while(!modem.gprsConnect(apn, User, Pass)) {
+        // DBG("Failed to connect, delaying 10s and retrying");
+        SerialMon.print("Failed to connect, delaying 10s and retrying");
+        delay(10000);
+    }
+    // GPRS Status Check
+    // Confirms whether we connected to the correct network
+    if (modem.isGprsConnected()) {
+        // DBG("✅ GPRS is connected");
+        SerialMon.println("✅ GPRS is connected");
+
+
+        String ccid = modem.getSimCCID();
+        // DBG("CCID:", ccid);
+        SerialMon.print("CCID:"); SerialMon.println(ccid);
+
+
+        String imei = modem.getIMEI();
+        // DBG("IMEI:", imei);
+        SerialMon.print("IMEI:"); SerialMon.println(imei);
+
+
+        String imsi = modem.getIMSI();
+        // DBG("IMSI:", imsi);
+        SerialMon.print("IMSI:"); SerialMon.println(imsi);
+
+
+        String cop = modem.getOperator();
+        // DBG("Operator:", cop);
+        SerialMon.print("Operator:"); SerialMon.println(cop);
+    } else {
+        SerialMon.println("❌ GPRS not connected");
+    }
+
+    // DBG("✅ Network connected!");
+    SerialMon.println("✅ Network connected!");
+}
+
+void loop() {
+  //trigger - tx (PIN 10) output
+  //echo - rx (PIN 11) input
+  dist15 = readSensor(sensor15) + offsetDist15; //distance reading of 15-degree sesnsor
+  delay(50); // Delay between sensor reads
+  dist60 = readSensor(sensor60) + offsetDist60; //distance reading of 60-degree sesnsor
+  delay(50); // Delay between sensor reads
+
+  h15 = dumpsterHeight - (dist15 * sin(angleTop*PI/180)); //height reading of the 15 degree sensor
+  h60 = dumpsterHeight - ((dist60) * sin(angleBottom*PI/180) + offsetHeight60); //height reading of the 60 degree sensor
+  x15 = dumpsterLen - (dist15 * cos(radians(15))); //x-axis distance reading of the 15 degree sensor from the end of the bin's wall to trash
+  x60 = dumpsterLen - (dist60 * cos(radians(60))); //x-axis distance reading of the 60 degree senso from the end of the bin's wall to trash
+
+  Serial.print("dist15: ");
+  Serial.println(dist15 - offsetDist15);
+  Serial.print("dist60: ");
+  Serial.println(dist60 - offsetDist60);
+  Serial.print("h60: ");
+  Serial.println(h60);
+  Serial.print("h15: ");
+  Serial.println(h15);
+
+  trashVolume = 0;
+
+  //Check 60-degree if reading things
+  //if the detected ditance is shorter than 85% of the defualt distance -> sensor is detecting trash
+  if(dist60 <= defaultD60){
+    trashVolume = h60 * dumpsterWidth * dumpsterLen; //Changing x60 to dumpsterLength to reduce volume error
+    if(dist15 <= defaultD15){   
+      //Seperate into 2 volume
+      //Serial.println("True");
+      long bottomVol = h60 * dumpsterWidth * dumpsterLen; //Changing x60 to dumpsterLength to reduce volume error 
+      long topVol = (x60 + x15) * (h15-h60) / 2 * dumpsterWidth;
+      trashVolume = topVol+bottomVol;
+      }
+    
+    // Send JSON data to Soracom
+    sendDataToSoracom(SerialMon);
+    delay(5000);
+  }
+
+  //Serial.print("Trash Vol: ");
+  //Serial.println(trashVolume);
+
+  //Serial.print("Total Vol: ");
+  //Serial.println(totalVolume);
+  
+  fullnessPer = ((float)trashVolume / (float)totalVolume) * 100; //Calculte the fullness percentage
+  Serial.print(fullnessPer);
+  Serial.println("%");
+  delay(1000); // Main loop delay
+}
+
+long readSensor(SoftwareSerial &sensor) {
+  sensor.listen(); 
+  delay(50); // allow serial to switch
+  
+  unsigned long startTime = millis();
+
+  while (millis() - startTime < 300) {
+
+    // Look for header byte 0xFF without consuming it
+    if (sensor.available() && sensor.peek() == 0xFF) {
+
+      // Ensure full packet exists
+      if (sensor.available() >= 4) {
+        sensor.read(); // consume header (0xFF)
+
+        uint8_t high = sensor.read();
+        uint8_t low  = sensor.read();
+        uint8_t sum  = sensor.read();
+
+        uint8_t calc = (0xFF + high + low) & 0xFF;
+
+        if (sum == calc) {
+          uint16_t mm = (high << 8) | low;   // raw distance in mm
+          return mm * 0.0393700787;          // inches
+        }
+
+        // bad checksum → discard one byte and resync
+      }
+    } 
+    else {
+      // discard misaligned byte
+      if (sensor.available()) sensor.read();
+    }
+  }
+
+  return -1; // timeout / no valid packet
+}
