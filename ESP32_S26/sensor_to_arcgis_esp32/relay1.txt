@@ -1,0 +1,2 @@
+{"id":5, "fullness":97.22, "temp":24.5}
+{"id":5, "fullness":97.22, "temp":24.5}
