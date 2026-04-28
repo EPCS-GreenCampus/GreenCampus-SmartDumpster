@@ -1,0 +1,75 @@
+=== SENSOR READINGS ===
+Distance 60° sensor: 32 inches
+Distance 15° sensor: 20 inches
+Fullness: 0.00%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 32 inches
+Distance 15° sensor: 20 inches
+Fullness: 0.00%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 33 inches
+Distance 15° sensor: 20 inches
+Fullness: 0.00%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 33 inches
+Distance 15° sensor: 20 inches
+Fullness: 0.00%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 33 inches
+Distance 15° sensor: 20 inches
+Fullness: 0.00%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 12 inches
+Distance 15° sensor: 13 inches
+Fullness: 65.63%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 12 inches
+Distance 15° sensor: 15 inches
+Fullness: 63.00%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 13 inches
+Distance 15° sensor: 17 inches
+Fullness: 58.31%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 13 inches
+Distance 15° sensor: 18 inches
+Fullness: 57.06%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 13 inches
+Distance 15° sensor: 15 inches
+Fullness: 60.90%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 13 inches
+Distance 15° sensor: 13 inches
+Fullness: 63.63%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 14 inches
+Distance 15° sensor: 20 inches (confirming jump: 1/3)
+Fullness: 52.27%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 14 inches
+Distance 15° sensor: 24 inches (confirming jump: 2/3)
+Fullness: 47.74%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 14 inches
+Distance 15° sensor: 17 inches (confirming jump: 1/3)
+Fullness: 56.04%
+
+=== SENSOR READINGS ===
+Distance 60° sensor: 14 inches
+Distance 15° sensor: 20 inches
+Fullness: 52.27%
+

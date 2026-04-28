@@ -1,0 +1,120 @@
+=== SENSOR READINGS =NGS ===
+id: 1
+Distance 60° sensor: 20 inches
+Distance 15° sensor: 32 inches
+Fullness: 20.95%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 20 inches
+Distance 15° sensor: 32 inches
+Fullness: 20.95%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 20 inches
+Distance 15° sensor: 32 inches
+Fullness: 20.95%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 20 inches
+Distance 15° sensor: 32 inches
+Fullness: 20.95%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 15 inches
+Distance 15° sensor: 32 inches (confirming jump: 2/3)
+Fullness: 37.32%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 18 inches
+Distance 15° sensor: 17 inches
+Fullness: 46.36%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 18 inches
+Distance 15° sensor: 17 inches
+Fullness: 46.36%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 18 inches
+Distance 15° sensor: 17 inches
+Fullness: 46.36%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 18 inches
+Distance 15° sensor: 17 inches
+Fullness: 46.36%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 18 inches
+Distance 15° sensor: 17 inches
+Fullness: 46.36%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 17 inches (confirming jump: 1/3)
+Distance 15° sensor: 15 inches
+Fullness: 51.87%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 7 inches
+Distance 15° sensor: 9 inches
+Fullness: 79.39%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 8 inches
+Distance 15° sensor: 9 inches
+Fullness: 77.90%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 8 inches
+Distance 15° sensor: 9 inches
+Fullness: 77.90%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 8 inches
+Distance 15° sensor: 9 inches
+Fullness: 77.90%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 8 inches
+Distance 15° sensor: 9 inches
+Fullness: 77.90%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 7 inches
+Distance 15° sensor: 7 inches
+Fullness: 81.94%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 1 inches
+Distance 15° sensor: 1 inches
+Fullness: 95.65%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 1 inches
+Distance 15° sensor: 3 inches
+Fullness: 93.27%
+
+=== SENSOR READINGS ===
+id: 1
+Distance 60° sensor: 1 inches
+Distance 15° sensor: 5 inches
+Fullness: 91.03%
+
